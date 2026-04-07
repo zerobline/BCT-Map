@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BCT Family Origins Map – Basel Children's Trust</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Lato:wght@400;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --teal:   #3a9e9e;
+      --coral:  #e8724a;
+      --yellow: #f5c842;
+      --navy:   #1e3a5f;
+      --purple: #7c5cbf;
+      --light:  #f7f4ef;
+      --white:  #ffffff;
+      --gray:   #6b7280;
+      --border: #e2dcd4;
+    }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Lato', sans-serif;
+      color: var(--navy);
+      display: flex; flex-direction: column;
+      height: 100vh; overflow: hidden;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--white);
+      border-bottom: 3px solid var(--teal);
+      padding: 11px 22px;
+      display: flex; align-items: center; gap: 13px;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(30,58,95,.08);
+    }
+    .logo {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--teal), var(--coral));
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 16px;
+      color: white; flex-shrink: 0;
+      box-shadow: 0 3px 10px rgba(58,158,158,.35);
+    }
+    header h1 { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 19px; color: var(--navy); line-height: 1.2; }
+    header h1 em { font-style: normal; color: var(--teal); }
+    header p { font-size: 12px; color: var(--gray); margin-top: 1px; }
+
+    /* LAYOUT */
+    main { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+    /* SIDEBAR */
+    aside {
+      width: 320px; flex-shrink: 0;
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden; z-index: 10;
+    }
+    .sb { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 0; }
+
+    .section { padding: 14px 0; border-bottom: 1px solid var(--border); }
+    .section:last-child { border-bottom: none; }
+
+    .lbl {
+      font-family: 'Nunito', sans-serif; font-weight: 800;
+      font-size: 10.5px; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--teal); margin-bottom: 7px;
+      display: flex; align-items: center; gap: 5px;
+    }
+
+    input[type=text], textarea {
+      width: 100%;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 9px 11px;
+      font-family: 'Lato', sans-serif; font-size: 13.5px;
+      color: var(--navy); background: var(--light); outline: none;
+      transition: border-color .2s;
+    }
+    input[type=text]:focus, textarea:focus { border-color: var(--teal); background: white; }
+    textarea { height: 110px; resize: vertical; }
+    .hint { font-size: 11.5px; color: var(--gray); margin-top: 5px; line-height: 1.5; }
+
+    /* VENUE */
+    .venue-card {
+      background: #fff8f0; border: 1.5px solid var(--yellow);
+      border-radius: 10px; padding: 11px 13px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .venue-row { display: flex; gap: 8px; align-items: center; }
+    .venue-row input { flex: 1; }
+    .venue-btn {
+      border: none; cursor: pointer;
+      background: var(--yellow); color: var(--navy);
+      font-family: 'Nunito', sans-serif; font-weight: 800;
+      font-size: 12px; border-radius: 7px;
+      padding: 9px 11px; white-space: nowrap;
+      transition: all .18s; flex-shrink: 0;
+    }
+    .venue-btn:hover { background: #e0b000; transform: translateY(-1px); }
+    .venue-set {
+      display: flex; align-items: center; gap: 8px;
+      background: white; border-radius: 7px;
+      padding: 7px 10px; border: 1px solid var(--border); font-size: 13px;
+    }
+    .venue-set .vname { flex: 1; font-weight: 700; color: var(--navy); }
+    .venue-clear {
+      border: none; background: none; cursor: pointer;
+      color: var(--gray); font-size: 16px; padding: 1px 4px; border-radius: 4px;
+    }
+    .venue-clear:hover { color: var(--coral); background: #fef0eb; }
+
+    /* DISTANCE TOGGLE */
+    .toggle-card {
+      background: #f0f7ff;
+      border: 1.5px solid #a8c8e8;
+      border-radius: 10px;
+      padding: 11px 13px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .toggle-card.active { background: #e8f5f5; border-color: var(--teal); }
+    .toggle-info { flex: 1; }
+    .toggle-info strong { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 13px; color: var(--navy); display: block; }
+    .toggle-info span { font-size: 11.5px; color: var(--gray); }
+
+    /* Toggle switch */
+    .switch { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; inset: 0;
+      background: #ccc; border-radius: 24px; transition: .3s;
+    }
+    .slider:before {
+      position: absolute; content: "";
+      height: 18px; width: 18px; left: 3px; bottom: 3px;
+      background: white; border-radius: 50%; transition: .3s;
+      box-shadow: 0 1px 4px rgba(0,0,0,.2);
+    }
+    input:checked + .slider { background: var(--teal); }
+    input:checked + .slider:before { transform: translateX(18px); }
+
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      border: none; cursor: pointer;
+      font-family: 'Nunito', sans-serif; font-weight: 700;
+      border-radius: 8px; padding: 9px 13px; font-size: 13.5px;
+      transition: all .18s; width: 100%;
+    }
+    .btn-teal  { background: var(--teal); color: white; box-shadow: 0 3px 10px rgba(58,158,158,.28); margin-top: 10px; }
+    .btn-teal:hover  { background: #2d8080; transform: translateY(-1px); }
+    .btn-coral { background: var(--coral); color: white; box-shadow: 0 3px 10px rgba(232,114,74,.28); }
+    .btn-coral:hover { background: #d05e3a; transform: translateY(-1px); }
+    .btn-ghost { background: var(--light); color: var(--navy); border: 1px solid var(--border); font-size: 12.5px; flex: 1; }
+    .btn-ghost:hover { background: var(--border); }
+    .btn-row { display: flex; gap: 7px; margin-top: 8px; }
+
+    /* FAMILY LIST */
+    #locList { display: flex; flex-direction: column; gap: 5px; margin-top: 2px; }
+    .loc-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 9px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--white);
+      cursor: pointer; transition: all .15s;
+    }
+    .loc-item:hover { border-color: var(--teal); background: #f0fafa; }
+    .di {
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-family: 'Nunito', sans-serif; font-weight: 800; color: white; flex-shrink: 0;
+    }
+    .loc-name { flex: 1; font-size: 13px; font-weight: 600; line-height: 1.3; }
+    .loc-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+    .loc-cnt  { font-size: 12px; color: var(--gray); font-weight: 700; white-space: nowrap; }
+    .loc-km   { font-size: 11px; color: var(--teal); font-weight: 700; white-space: nowrap; }
+    .loc-del  {
+      border: none; background: none; cursor: pointer;
+      color: var(--gray); font-size: 17px; line-height: 1;
+      border-radius: 4px; padding: 1px 4px;
+    }
+    .loc-del:hover { color: var(--coral); background: #fef0eb; }
+    .empty { text-align: center; color: var(--gray); font-size: 13px; padding: 12px 0; }
+
+    /* FOOTER */
+    .sb-foot { padding: 13px 16px; border-top: 1px solid var(--border); background: var(--white); }
+
+    /* STATUS */
+    .sbar {
+      background: var(--navy); color: white;
+      font-family: 'Nunito', sans-serif; font-weight: 700;
+      font-size: 12px; padding: 7px 18px;
+      display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    }
+    .sbar .sd { width: 8px; height: 8px; border-radius: 50%; background: var(--yellow); flex-shrink: 0; }
+
+    /* MAP */
+    #map { flex: 1; }
+
+    /* ROUTE LABEL */
+    .route-label {
+      background: white;
+      border: 2px solid var(--teal);
+      border-radius: 12px;
+      padding: 3px 8px;
+      font-family: 'Nunito', sans-serif;
+      font-weight: 800;
+      font-size: 12px;
+      color: var(--navy);
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,.15);
+    }
+
+    /* LEGEND */
+    .legend {
+      position: absolute; bottom: 28px; right: 10px;
+      background: white; border-radius: 10px;
+      padding: 11px 13px; z-index: 900;
+      box-shadow: 0 3px 14px rgba(0,0,0,.14);
+      font-family: 'Nunito', sans-serif; font-size: 12px; min-width: 155px;
+    }
+    .leg-title { font-weight: 800; color: var(--navy); font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 7px; }
+    .leg-row { display: flex; align-items: center; gap: 7px; margin-bottom: 4px; }
+    .leg-dot { border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 800; flex-shrink: 0; }
+    .leg-divider { border-top: 1px solid var(--border); margin: 6px 0; }
+
+    /* LOADING SPINNER */
+    #spinner {
+      display: none;
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+      background: rgba(255,255,255,.92); border-radius: 14px;
+      padding: 20px 28px; z-index: 1000;
+      text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,.15);
+      font-family: 'Nunito', sans-serif; font-weight: 700; color: var(--navy);
+    }
+    .spin {
+      width: 32px; height: 32px; border: 4px solid var(--border);
+      border-top-color: var(--teal); border-radius: 50%;
+      animation: spin .8s linear infinite; margin: 0 auto 10px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── PRINT VIEW (hidden on screen) ── */
+    #print-view { display: none; }
+
+    @media print {
+      @page { size: A4 portrait; margin: 14mm 14mm 14mm 14mm; }
+
+      /* hide everything interactive */
+      aside, header, .sbar, .legend { display: none !important; }
+      main { display: block !important; overflow: visible !important; position: static !important; }
+      #map { display: none !important; }
+
+      /* show print view */
+      #print-view {
+        display: block !important;
+        font-family: 'Lato', sans-serif;
+        color: #1e3a5f;
+        width: 100%;
+      }
+
+      .pv-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 3px solid #3a9e9e;
+        padding-bottom: 10px;
+        margin-bottom: 14px;
+      }
+      .pv-logo {
+        width: 44px; height: 44px; border-radius: 50%;
+        background: linear-gradient(135deg, #3a9e9e, #e8724a);
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 15px;
+        color: white; flex-shrink: 0;
+      }
+      .pv-title { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 18px; color: #1e3a5f; }
+      .pv-title em { font-style: normal; color: #3a9e9e; }
+      .pv-sub { font-size: 11px; color: #6b7280; margin-top: 1px; }
+      .pv-date { margin-left: auto; font-size: 11px; color: #6b7280; text-align: right; }
+
+      /* venue + summary row */
+      .pv-meta {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .pv-venue-box, .pv-summary-box {
+        flex: 1;
+        border-radius: 8px;
+        padding: 9px 13px;
+      }
+      .pv-venue-box {
+        background: #fff8e6;
+        border: 1.5px solid #f5c842;
+      }
+      .pv-summary-box {
+        background: #f0fafa;
+        border: 1.5px solid #3a9e9e;
+      }
+      .pv-box-label {
+        font-family: 'Nunito', sans-serif; font-weight: 800;
+        font-size: 9.5px; text-transform: uppercase;
+        letter-spacing: .07em; color: #6b7280; margin-bottom: 3px;
+      }
+      .pv-box-value {
+        font-family: 'Nunito', sans-serif; font-weight: 800;
+        font-size: 14px; color: #1e3a5f;
+      }
+
+      /* section title */
+      .pv-section-title {
+        font-family: 'Nunito', sans-serif; font-weight: 800;
+        font-size: 10px; text-transform: uppercase;
+        letter-spacing: .08em; color: #3a9e9e;
+        margin-bottom: 6px; margin-top: 12px;
+      }
+
+      /* table */
+      .pv-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        margin-bottom: 14px;
+      }
+      .pv-table th {
+        font-family: 'Nunito', sans-serif; font-weight: 800;
+        font-size: 10px; text-transform: uppercase;
+        letter-spacing: .06em; color: #6b7280;
+        border-bottom: 2px solid #e2dcd4;
+        padding: 5px 8px; text-align: left;
+      }
+      .pv-table th.right, .pv-table td.right { text-align: right; }
+      .pv-table td { padding: 5px 8px; border-bottom: 1px solid #f0ece6; vertical-align: middle; }
+      .pv-table tr:last-child td { border-bottom: none; }
+      .pv-table tr:nth-child(even) td { background: #faf8f5; }
+
+      .pv-dot {
+        display: inline-flex; align-items: center; justify-content: center;
+        border-radius: 50%; color: white;
+        font-family: 'Nunito', sans-serif; font-weight: 800;
+        width: 22px; height: 22px; font-size: 11px;
+        vertical-align: middle; margin-right: 6px;
+      }
+      .pv-bar-wrap { display: flex; align-items: center; gap: 6px; }
+      .pv-bar {
+        height: 7px; border-radius: 4px; min-width: 4px;
+      }
+      .pv-bar-num { font-size: 11px; color: #6b7280; font-weight: 700; white-space: nowrap; }
+
+      /* map container inside print */
+      .pv-map-wrap {
+        width: 100%;
+        border: 1px solid #e2dcd4;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">BCT</div>
+  <div>
+    <h1>Basel Children's <em>Trust</em></h1>
+    <p>Family Origins Map — Where our families come from</p>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <div class="sb">
+
+      <!-- STEP 1: VENUE -->
+      <div class="section">
+        <div class="lbl">⭐ Step 1 — Event venue</div>
+        <div class="venue-card">
+          <div class="venue-row">
+            <input type="text" id="venueName" placeholder="e.g. Kannenfeldpark"/>
+            <button class="venue-btn" onclick="setVenue()">📍 Set</button>
+          </div>
+          <div class="hint" style="margin-top:0">Where was the event held? Shown as a star ⭐ on the map.</div>
+          <div id="venueSet" style="display:none">
+            <div class="venue-set">
+              <span>⭐</span>
+              <span class="vname" id="venueLabel">—</span>
+              <button class="venue-clear" onclick="clearVenue()">×</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2: FAMILIES -->
+      <div class="section">
+        <div class="lbl">🏘 Step 2 — Where families live</div>
+        <textarea id="txt" placeholder="One neighbourhood per attending family:&#10;&#10;Gundeldingen&#10;Iselin&#10;Gundeldingen&#10;St. Alban&#10;Bachletten"></textarea>
+        <div class="hint">Enter the same neighbourhood once per attending family. Same area = bigger dot.</div>
+        <button class="btn btn-teal" onclick="plot()">🗺 Show on Map</button>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="loadEx()">✨ Example</button>
+          <button class="btn btn-ghost" onclick="clearAll()">🗑 Clear all</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: DISTANCE TOGGLE -->
+      <div class="section">
+        <div class="lbl">🚗 Step 3 — Driving distances</div>
+        <div class="toggle-card" id="toggleCard">
+          <div class="toggle-info">
+            <strong>Show routes &amp; distances</strong>
+            <span>Draw driving route from each area to venue with km label</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="distToggle" onchange="toggleDistances()"/>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="hint" style="margin-top:8px">Needs venue + family locations on map first.</div>
+      </div>
+
+      <!-- FAMILY LIST -->
+      <div class="section">
+        <div class="lbl">Neighbourhoods (<span id="cnt">0</span> areas · <span id="totalFam">0</span> families)</div>
+        <div id="locList"><div class="empty">No data yet.</div></div>
+      </div>
+
+    </div>
+
+    <div class="sb-foot">
+      <button class="btn btn-coral" onclick="window.print()">🖨 Print / Save PDF for committee</button>
+    </div>
+  </aside>
+
+  <div id="map"></div>
+
+  <div id="spinner"><div class="spin"></div>Calculating routes…</div>
+
+  <div class="legend" id="leg" style="display:none">
+    <div class="leg-title">Families from area</div>
+    <div class="leg-row"><div class="leg-dot" style="background:#3a9e9e;width:17px;height:17px;font-size:9px">1</div><span>1 family</span></div>
+    <div class="leg-row"><div class="leg-dot" style="background:#e8724a;width:21px;height:21px;font-size:10px">2</div><span>2 families</span></div>
+    <div class="leg-row"><div class="leg-dot" style="background:#1e3a5f;width:25px;height:25px;font-size:11px">3</div><span>3 families</span></div>
+    <div class="leg-row"><div class="leg-dot" style="background:#f5c842;width:29px;height:29px;font-size:11px;color:#333">4</div><span>4 families</span></div>
+    <div class="leg-row"><div class="leg-dot" style="background:#7c5cbf;width:33px;height:33px;font-size:11px">5+</div><span>5+ families</span></div>
+    <div class="leg-divider"></div>
+    <div class="leg-row"><span style="font-size:15px">⭐</span><span>Event venue</span></div>
+    <div id="legRoute" style="display:none">
+      <div class="leg-divider"></div>
+      <div class="leg-row">
+        <div style="width:28px;height:4px;background:#3a9e9e;border-radius:2px;flex-shrink:0"></div>
+        <span>Driving route</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<div class="sbar">
+  <div class="sd"></div>
+  <span id="status">Step 1: set the event venue. Step 2: enter family neighbourhoods.</span>
+</div>
+
+<script>
+// ── MAP ───────────────────────────────────────────────────────────────────────
+const map = L.map('map').setView([47.5596, 7.5886], 13);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  subdomains: 'abcd', maxZoom: 19
+}).addTo(map);
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let locs = {};           // family neighbourhood markers
+let venueMarker = null;  // star marker
+let venueLatlng = null;  // [lat, lng]
+let routeLayers = [];    // polylines + labels currently on map
+
+const COLORS = ['#3a9e9e','#e8724a','#1e3a5f','#f5c842','#7c5cbf'];
+const gc = n => COLORS[Math.min(n-1, COLORS.length-1)];
+const gr = n => 18 + Math.min(n-1, 6) * 5;
+
+// ── STAR ICON ─────────────────────────────────────────────────────────────────
+const starIcon = L.divIcon({
+  html: `<div style="width:44px;height:44px;background:#f5c842;border:3px solid #1e3a5f;
+    border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:22px;box-shadow:0 3px 10px rgba(0,0,0,.25);">⭐</div>`,
+  className:'', iconSize:[44,44], iconAnchor:[22,22], popupAnchor:[0,-24]
+});
+
+// ── FAMILY DOT ICON ───────────────────────────────────────────────────────────
+function mkIcon(n) {
+  const r = gr(n), d = r*2, col = gc(n), fs = Math.max(10, Math.round(r*.68));
+  const lbl = n > 99 ? '99+' : n;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${d}" height="${d}" viewBox="0 0 ${d} ${d}">
+    <circle cx="${r}" cy="${r}" r="${r-2}" fill="${col}" stroke="white" stroke-width="3" opacity=".93"/>
+    <text x="${r}" y="${r+fs*.37}" text-anchor="middle"
+      font-family="Nunito,Arial,sans-serif" font-weight="800" font-size="${fs}px" fill="white">${lbl}</text>
+  </svg>`;
+  return L.divIcon({ html: svg, className:'', iconSize:[d,d], iconAnchor:[r,r], popupAnchor:[0,-r] });
+}
+
+// ── GEOCODE ───────────────────────────────────────────────────────────────────
+async function geocode(name) {
+  const tries = [`${name}, Basel, Switzerland`, `${name}, Basel-Stadt, Switzerland`, `${name}, Switzerland`, name];
+  for (const q of tries) {
+    try {
+      const r = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
+        { headers: { 'Accept-Language': 'en' } }
+      );
+      const d = await r.json();
+      if (d && d.length) return [parseFloat(d[0].lat), parseFloat(d[0].lon)];
+    } catch(e) {}
+  }
+  return null;
+}
+
+// ── VENUE ─────────────────────────────────────────────────────────────────────
+async function setVenue() {
+  const name = document.getElementById('venueName').value.trim();
+  if (!name) { st('⚠️ Please enter a venue name first.'); return; }
+  st(`🔍 Looking up venue "${name}"…`);
+  if (venueMarker) { map.removeLayer(venueMarker); venueMarker = null; }
+  clearRoutes();
+  document.getElementById('distToggle').checked = false;
+  updateToggleCard();
+
+  const ll = await geocode(name);
+  if (!ll) { st(`⚠️ Could not find "${name}" — try a more specific name.`); return; }
+
+  venueLatlng = ll;
+  venueMarker = L.marker(ll, { icon: starIcon, zIndexOffset: 1000 }).addTo(map)
+    .bindPopup(`<div style="font-family:'Nunito',sans-serif;padding:3px 2px">
+      <strong style="color:#1e3a5f;font-size:14px">⭐ ${name}</strong><br>
+      <span style="color:#6b7280;font-size:12px">Event venue</span></div>`);
+
+  document.getElementById('venueLabel').textContent = name;
+  document.getElementById('venueSet').style.display = '';
+  document.getElementById('leg').style.display = '';
+  map.setView(ll, 14);
+  st(`⭐ Venue set: ${name}. Now enter family neighbourhoods in Step 2.`);
+}
+
+function clearVenue() {
+  if (venueMarker) { map.removeLayer(venueMarker); venueMarker = null; }
+  venueLatlng = null;
+  clearRoutes();
+  document.getElementById('venueName').value = '';
+  document.getElementById('venueSet').style.display = 'none';
+  document.getElementById('distToggle').checked = false;
+  updateToggleCard();
+  if (!Object.keys(locs).length) document.getElementById('leg').style.display = 'none';
+  st('Venue cleared.');
+}
+
+// ── PLOT FAMILIES ─────────────────────────────────────────────────────────────
+async function plot() {
+  const raw = document.getElementById('txt').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l.length);
+  if (!lines.length) { st('⚠️ Please enter at least one neighbourhood.'); return; }
+
+  // Clear existing routes when new data is added
+  clearRoutes();
+  document.getElementById('distToggle').checked = false;
+  updateToggleCard();
+
+  lines.forEach(name => {
+    const key = name.toLowerCase().trim();
+    if (!locs[key]) locs[key] = { displayName: name, count: 0, marker: null, latlng: null, km: null };
+    locs[key].count++;
+  });
+  document.getElementById('txt').value = '';
+  renderList();
+
+  const todo = Object.entries(locs).filter(([,v])=>!v.latlng);
+  if (!todo.length) { refresh(); return; }
+
+  st(`🔍 Looking up ${todo.length} neighbourhood(s)… please wait.`);
+  for (const [key, loc] of todo) {
+    await delay(420);
+    const ll = await geocode(loc.displayName);
+    if (ll) loc.latlng = ll;
+    else st(`⚠️ Could not find "${loc.displayName}" — try a more specific name.`);
+  }
+  refresh();
+}
+
+function refresh() {
+  Object.values(locs).forEach(l => { if (l.marker) { map.removeLayer(l.marker); l.marker = null; } });
+  const bounds = [];
+  Object.entries(locs).forEach(([,loc]) => {
+    if (!loc.latlng) return;
+    const fam = loc.count === 1 ? '1 family' : `${loc.count} families`;
+    const kmTxt = loc.km !== null ? `<br><span style="color:#3a9e9e;font-size:12px">🚗 ${loc.km} km by car</span>` : '';
+    loc.marker = L.marker(loc.latlng, { icon: mkIcon(loc.count) }).addTo(map)
+      .bindPopup(`<div style="font-family:'Nunito',sans-serif;padding:3px 2px;min-width:140px">
+        <strong style="color:#1e3a5f;font-size:14px">${loc.displayName}</strong><br>
+        <span style="color:${gc(loc.count)};font-weight:700;font-size:13px">${fam} attended</span>${kmTxt}</div>`);
+    bounds.push(loc.latlng);
+  });
+
+  if (venueLatlng) bounds.push(venueLatlng);
+  if (bounds.length === 1) map.setView(bounds[0], 15);
+  else if (bounds.length > 1) map.fitBounds(bounds, { padding:[60,60] });
+
+  document.getElementById('leg').style.display = bounds.length ? '' : 'none';
+  renderList();
+  const total = Object.values(locs).reduce((s,l)=>s+l.count,0);
+  st(`✅ ${total} famil${total===1?'y':'ies'} from ${Object.keys(locs).length} neighbourhood(s) mapped.`);
+}
+
+// ── ROUTING via OSRM (free, no key needed) ────────────────────────────────────
+async function getRoute(fromLatLng, toLatLng) {
+  const url = `https://router.project-osrm.org/route/v1/driving/` +
+    `${fromLatLng[1]},${fromLatLng[0]};${toLatLng[1]},${toLatLng[0]}` +
+    `?overview=full&geometries=geojson`;
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    if (d.code === 'Ok' && d.routes && d.routes.length) {
+      const route = d.routes[0];
+      const km = (route.distance / 1000).toFixed(1);
+      const coords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+      return { km, coords };
+    }
+  } catch(e) {}
+  return null;
+}
+
+// ── TOGGLE DISTANCES ──────────────────────────────────────────────────────────
+async function toggleDistances() {
+  const on = document.getElementById('distToggle').checked;
+  updateToggleCard();
+
+  if (!on) {
+    clearRoutes();
+    // Reset km labels but keep popups working
+    Object.values(locs).forEach(l => { l.km = null; });
+    refresh();
+    document.getElementById('legRoute').style.display = 'none';
+    st('Routes hidden.');
+    return;
+  }
+
+  if (!venueLatlng) {
+    st('⚠️ Please set the event venue first (Step 1).');
+    document.getElementById('distToggle').checked = false;
+    updateToggleCard();
+    return;
+  }
+  const validLocs = Object.values(locs).filter(l => l.latlng);
+  if (!validLocs.length) {
+    st('⚠️ Please add family neighbourhoods first (Step 2).');
+    document.getElementById('distToggle').checked = false;
+    updateToggleCard();
+    return;
+  }
+
+  document.getElementById('spinner').style.display = 'block';
+  st(`🚗 Calculating ${validLocs.length} driving route(s)…`);
+  clearRoutes();
+
+  for (const loc of validLocs) {
+    await delay(200);
+    const result = await getRoute(loc.latlng, venueLatlng);
+    if (result) {
+      loc.km = result.km;
+
+      // Draw route line
+      const line = L.polyline(result.coords, {
+        color: gc(loc.count),
+        weight: 3,
+        opacity: 0.7,
+        dashArray: '6, 4'
+      }).addTo(map);
+
+      // km label at midpoint of route
+      const mid = result.coords[Math.floor(result.coords.length / 2)];
+      const label = L.marker(mid, {
+        icon: L.divIcon({
+          html: `<div class="route-label" style="border-color:${gc(loc.count)}">${result.km} km</div>`,
+          className: '',
+          iconAnchor: [28, 12]
+        }),
+        interactive: false
+      }).addTo(map);
+
+      routeLayers.push(line, label);
+    }
+  }
+
+  document.getElementById('spinner').style.display = 'none';
+  document.getElementById('legRoute').style.display = '';
+
+  // Refresh markers so popups show km
+  refresh();
+
+  const total = Object.values(locs).reduce((s,l)=>s+l.count,0);
+  st(`✅ ${validLocs.length} route(s) drawn. Toggle off to hide.`);
+}
+
+function clearRoutes() {
+  routeLayers.forEach(l => map.removeLayer(l));
+  routeLayers = [];
+}
+
+function updateToggleCard() {
+  const on = document.getElementById('distToggle').checked;
+  document.getElementById('toggleCard').classList.toggle('active', on);
+}
+
+// ── LIST ──────────────────────────────────────────────────────────────────────
+function renderList() {
+  const el = document.getElementById('locList');
+  const keys = Object.keys(locs);
+  const total = Object.values(locs).reduce((s,l)=>s+l.count,0);
+  document.getElementById('cnt').textContent = keys.length;
+  document.getElementById('totalFam').textContent = total;
+  if (!keys.length) { el.innerHTML = '<div class="empty">No data yet.</div>'; return; }
+
+  el.innerHTML = '';
+  [...keys].sort((a,b)=>locs[b].count-locs[a].count).forEach(key => {
+    const loc = locs[key], col = gc(loc.count);
+    const sz = 22 + Math.min(loc.count-1,4)*2, fs = Math.max(10,Math.round(sz*.5));
+    const div = document.createElement('div');
+    div.className = 'loc-item';
+    div.innerHTML = `
+      <div class="di" style="background:${col};width:${sz}px;height:${sz}px;font-size:${fs}px">${loc.count}</div>
+      <div class="loc-name">${loc.displayName}</div>
+      <div class="loc-meta">
+        <span class="loc-cnt">${loc.count} fam.</span>
+        ${loc.km !== null ? `<span class="loc-km">🚗 ${loc.km} km</span>` : ''}
+      </div>
+      <button class="loc-del" title="Remove">×</button>`;
+    div.addEventListener('click', e => {
+      if (e.target.classList.contains('loc-del')) return;
+      if (loc.latlng) { map.setView(loc.latlng,16); if (loc.marker) loc.marker.openPopup(); }
+    });
+    div.querySelector('.loc-del').addEventListener('click', () => {
+      if (loc.marker) map.removeLayer(loc.marker);
+      delete locs[key];
+      clearRoutes();
+      document.getElementById('distToggle').checked = false;
+      updateToggleCard();
+      renderList();
+      if (!Object.keys(locs).length && !venueMarker) document.getElementById('leg').style.display='none';
+    });
+    el.appendChild(div);
+  });
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function clearAll() {
+  Object.values(locs).forEach(l=>{ if(l.marker) map.removeLayer(l.marker); });
+  locs = {};
+  if (venueMarker) { map.removeLayer(venueMarker); venueMarker = null; }
+  venueLatlng = null;
+  clearRoutes();
+  document.getElementById('venueName').value = '';
+  document.getElementById('venueSet').style.display = 'none';
+  document.getElementById('distToggle').checked = false;
+  updateToggleCard();
+  renderList();
+  document.getElementById('leg').style.display = 'none';
+  document.getElementById('legRoute').style.display = 'none';
+  st('Cleared. Start from Step 1.');
+}
+
+function loadEx() {
+  document.getElementById('venueName').value = 'Kannenfeldpark';
+  document.getElementById('txt').value = [
+    'Gundeldingen','Iselin','Gundeldingen',
+    'St. Alban','Bachletten','Iselin',
+    'Gundeldingen','Matthäus','Bachletten',
+    'Clara','Vorstädte','Iselin'
+  ].join('\n');
+}
+
+document.getElementById('venueName').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); setVenue(); }
+});
+
+const st = msg => document.getElementById('status').textContent = msg;
+const delay = ms => new Promise(r => setTimeout(r, ms));
+
+// ── PRINT LAYOUT ──────────────────────────────────────────────────────────────
+
+// Convert lat/lng to tile x,y at given zoom
+function latLngToTile(lat, lng, zoom) {
+  const n = Math.pow(2, zoom);
+  const x = Math.floor((lng + 180) / 360 * n);
+  const latRad = lat * Math.PI / 180;
+  const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+  return { x, y };
+}
+
+// Convert lat/lng to pixel on canvas
+function latLngToPixel(lat, lng, zoom, originTileX, originTileY, tileSize) {
+  const n = Math.pow(2, zoom);
+  const px = (lng + 180) / 360 * n * tileSize - originTileX * tileSize;
+  const latRad = lat * Math.PI / 180;
+  const py = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n * tileSize - originTileY * tileSize;
+  return { x: px, y: py };
+}
+
+function chooseBestZoom(points, canvasW, canvasH, tileSize) {
+  // Find bounding box
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  points.forEach(([lat,lng]) => {
+    minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
+    minLng = Math.min(minLng, lng); maxLng = Math.max(maxLng, lng);
+  });
+  // Try zooms from 15 down to 10, pick highest that fits with padding
+  for (let z = 15; z >= 10; z--) {
+    const tl = latLngToTile(maxLat, minLng, z);
+    const br = latLngToTile(minLat, maxLng, z);
+    const tilesW = (br.x - tl.x + 1);
+    const tilesH = (br.y - tl.y + 1);
+    if (tilesW * tileSize <= canvasW - 80 && tilesH * tileSize <= canvasH - 80) return z;
+  }
+  return 11;
+}
+
+async function buildPrintCanvas() {
+  const TILESIZE = 256;
+  const CANVAS_W = 1400; // high-res canvas (~5.5in at 254dpi, scales to fit)
+  const CANVAS_H = 900;
+  const COLORS = ['#3a9e9e','#e8724a','#1e3a5f','#f5c842','#7c5cbf'];
+  const gc2 = n => COLORS[Math.min(n-1, COLORS.length-1)];
+
+  // Collect all points
+  const allPts = [];
+  if (venueLatlng) allPts.push(venueLatlng);
+  Object.values(locs).forEach(l => { if (l.latlng) allPts.push(l.latlng); });
+
+  if (!allPts.length) return null;
+
+  // Pick zoom
+  const zoom = allPts.length === 1 ? 14 : chooseBestZoom(allPts, CANVAS_W, CANVAS_H, TILESIZE);
+
+  // Find tile range needed
+  let minTX = Infinity, minTY = Infinity, maxTX = -Infinity, maxTY = -Infinity;
+  allPts.forEach(([lat,lng]) => {
+    const t = latLngToTile(lat, lng, zoom);
+    minTX = Math.min(minTX, t.x - 1); minTY = Math.min(minTY, t.y - 1);
+    maxTX = Math.max(maxTX, t.x + 1); maxTY = Math.max(maxTY, t.y + 1);
+  });
+
+  const tilesW = maxTX - minTX + 1;
+  const tilesH = maxTY - minTY + 1;
+
+  // Create canvas
+  const canvas = document.createElement('canvas');
+  canvas.width  = tilesW * TILESIZE;
+  canvas.height = tilesH * TILESIZE;
+  const ctx = canvas.getContext('2d');
+
+  // Load and draw all tiles
+  const tilePromises = [];
+  for (let tx = minTX; tx <= maxTX; tx++) {
+    for (let ty = minTY; ty <= maxTY; ty++) {
+      const sub = ['a','b','c','d'][(tx + ty) % 4];
+      const url = `https://${sub}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${tx}/${ty}.png`;
+      const dx = (tx - minTX) * TILESIZE;
+      const dy = (ty - minTY) * TILESIZE;
+      tilePromises.push(new Promise(res => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => { ctx.drawImage(img, dx, dy, TILESIZE, TILESIZE); res(); };
+        img.onerror = () => res(); // skip failed tiles
+        img.src = url;
+      }));
+    }
+  }
+  await Promise.all(tilePromises);
+
+  // Helper: pixel position for a latlng
+  const toPx = ([lat, lng]) => latLngToPixel(lat, lng, zoom, minTX, minTY, TILESIZE);
+
+  // Draw family dots
+  Object.values(locs).forEach(loc => {
+    if (!loc.latlng) return;
+    const { x, y } = toPx(loc.latlng);
+    const r = 14 + Math.min(loc.count - 1, 6) * 4;
+    const col = gc2(loc.count);
+
+    // Shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur = 6;
+
+    // Circle
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = col;
+    ctx.globalAlpha = 0.93;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+
+    // White border
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Count label
+    ctx.fillStyle = 'white';
+    ctx.font = `bold ${Math.max(11, Math.round(r * 0.75))}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(loc.count > 99 ? '99+' : String(loc.count), x, y);
+  });
+
+  // Draw venue star
+  if (venueLatlng) {
+    const { x, y } = toPx(venueLatlng);
+    const R = 20;
+
+    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+    ctx.shadowBlur = 8;
+
+    // Yellow circle
+    ctx.beginPath();
+    ctx.arc(x, y, R, 0, Math.PI * 2);
+    ctx.fillStyle = '#f5c842';
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Navy border
+    ctx.beginPath();
+    ctx.arc(x, y, R, 0, Math.PI * 2);
+    ctx.strokeStyle = '#1e3a5f';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+
+    // Star emoji
+    ctx.font = `${R}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⭐', x, y);
+  }
+
+  return canvas.toDataURL('image/png');
+}
+
+async function buildPrintView() {
+  const keys = Object.keys(locs);
+  const total = Object.values(locs).reduce((s,l)=>s+l.count,0);
+  const venueName = document.getElementById('venueLabel').textContent;
+  const hasVenue = venueMarker !== null;
+  const sorted = [...keys].sort((a,b)=>locs[b].count-locs[a].count);
+  const maxCount = sorted.length ? locs[sorted[0]].count : 1;
+  const COLORS = ['#3a9e9e','#e8724a','#1e3a5f','#f5c842','#7c5cbf'];
+  const gc2 = n => COLORS[Math.min(n-1, COLORS.length-1)];
+  const now = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+
+  // Table rows
+  let rows = '';
+  sorted.forEach((key, i) => {
+    const loc = locs[key];
+    const col = gc2(loc.count);
+    const barW = Math.round((loc.count / maxCount) * 90);
+    rows += `<tr>
+      <td>${i+1}</td>
+      <td><span class="pv-dot" style="background:${col}">${loc.count}</span>${loc.displayName}</td>
+      <td class="right">
+        <div class="pv-bar-wrap">
+          <div class="pv-bar" style="background:${col};width:${barW}px"></div>
+          <span class="pv-bar-num">${loc.count} famil${loc.count===1?'y':'ies'}</span>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  // Build map image
+  st('🖨 Rendering map for print…');
+  const mapDataUrl = await buildPrintCanvas();
+
+  const mapHtml = mapDataUrl
+    ? `<img src="${mapDataUrl}" style="width:100%;height:auto;border-radius:6px;display:block"/>`
+    : `<div style="color:#999;text-align:center;padding:40px;font-size:13px">Map not available — no locations plotted yet.</div>`;
+
+  document.getElementById('print-view').innerHTML = `
+    <div class="pv-header">
+      <div class="pv-logo">BCT</div>
+      <div>
+        <div class="pv-title">Basel Children's <em>Trust</em></div>
+        <div class="pv-sub">Family Origins Map — Committee Report</div>
+      </div>
+      <div class="pv-date">Printed: ${now}</div>
+    </div>
+
+    <div class="pv-meta">
+      <div class="pv-venue-box">
+        <div class="pv-box-label">⭐ Event venue</div>
+        <div class="pv-box-value">${hasVenue ? venueName : '—'}</div>
+      </div>
+      <div class="pv-summary-box">
+        <div class="pv-box-label">👨‍👩‍👧 Families attended</div>
+        <div class="pv-box-value">${total} famil${total===1?'y':'ies'} from ${keys.length} area${keys.length===1?'':'s'}</div>
+      </div>
+    </div>
+
+    <div class="pv-section-title">Families by neighbourhood</div>
+    <table class="pv-table">
+      <thead><tr>
+        <th style="width:28px">#</th>
+        <th>Neighbourhood</th>
+        <th class="right">Families</th>
+      </tr></thead>
+      <tbody>${rows || '<tr><td colspan="3" style="color:#999;text-align:center;padding:12px">No data entered yet.</td></tr>'}</tbody>
+    </table>
+
+    <div class="pv-section-title">Map — family origin locations ${hasVenue ? '& event venue ⭐' : ''}</div>
+    <div class="pv-map-wrap">${mapHtml}</div>
+  `;
+
+  st('✅ Ready to print.');
+}
+
+// "Print" button triggers async build then opens dialog
+document.querySelector('.sb-foot .btn-coral').addEventListener('click', async (e) => {
+  e.stopImmediatePropagation();
+  await buildPrintView();
+  window.print();
+});
+// Remove old onclick
+document.querySelector('.sb-foot .btn-coral').removeAttribute('onclick');
+</script>
+
+<!-- PRINT VIEW (hidden on screen, shown when printing) -->
+<div id="print-view"></div>
+
+</body>
+</html>
